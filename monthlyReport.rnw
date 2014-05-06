@@ -1,0 +1,1270 @@
+% ----------------------------------------------------------------------------------------
+% RNW file for the FIXIT monthly report
+% ----------------------------------------------------------------------------------------
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{datetime}
+\usepackage{fullpage}
+\usepackage{longtable}
+\usepackage{multicol}
+\usepackage{multirow}
+\usepackage{parskip}
+\usepackage{pdflscape}
+\usepackage{varwidth}
+\usepackage[hang]{footmisc}
+
+
+
+\begin{document}
+
+% lose the footnote rule
+% \renewcommand*\footnoterule{}
+\renewcommand\footnoterule{\vspace*{0.3cm}\hrule width \linewidth\vspace*{0.3cm}}
+
+
+% ----------------------------------------------------------------------------------------
+% Logo and report title
+% ----------------------------------------------------------------------------------------
+\begin{minipage}[b]{1.5in}
+  \centering
+  \includegraphics[height=1in, width=1.5in]{METRClogo.pdf}
+\end{minipage}
+\hspace{0.25in}
+\begin{minipage}[b][1in][c]{5in}
+  \centering
+  \textbf{{\Huge FIXIT Monthly Report}} \\ 
+  \textbf{{\Large RCT Comparing Internal vs External Fixation}} \\
+  \textit{{\large Data as of \monthname[\Sexpr{thisMonth}] 1, 2014}}
+\end{minipage}
+
+
+
+% ----------------------------------------------------------------------------------------
+% Figure 1: RCT cumulative enrollment
+% ----------------------------------------------------------------------------------------
+\begin{multicols}{2}
+\begin{minipage}[t][3in][c]{3in} 
+<<figure1, fig.show='hold', out.width='3in', out.height='3in', echo=FALSE >>=
+
+# enumerate all possible months of enrollment
+dates  <- format(seq.Date(from=as.Date(paste(min(d$screenAndEnrollDate, na.rm=T), '01', 
+                                             sep='-'), 
+                                       '%Y-%m-%d'), 
+                          to  =as.Date(paste(prevYear, prevMonth, '01', sep='-'), 
+                                       '%Y-%m-%d'), 
+                          by  ='month'), '%Y-%m')
+
+# make into data frame for merging
+dates <- data.frame(`screenAndEnrollDate`=dates)
+
+# summarize enrollment by month, merge to all possible months                
+dPlot <- merge(dates, 
+               ddply(subset(d, group==1), 
+                     .(screenAndEnrollDate), 
+                     summarise, 
+                       pt=(sum(enrolled)/312)*100),
+               all.x=TRUE)
+               
+# for months with missing enrollment, set enrollment to 0
+dPlot$pt <- ifelse(is.na(dPlot$pt), 0, dPlot$pt)        
+                
+# get cumulative enrollment
+dPlot <- within(dPlot, cpt <- cumsum(pt))
+
+# plot
+p <- ggplot(data=dPlot)
+p <- p + geom_bar(aes(x=screenAndEnrollDate, y=cpt), stat='identity')
+p <- p + scale_x_discrete(
+  breaks=format(seq.Date(from=as.Date(paste(min(d$screenAndEnrollDate, 
+                                                na.rm=T), 
+                                            '01', 
+                                            sep='-'), 
+                                      '%Y-%m-%d'), 
+                         to  =as.Date(paste(prevYear, prevMonth, '01', 
+                                            sep='-'), 
+                                       '%Y-%m-%d'), 
+                         by  ='2 month'), '%Y-%m'))
+p <- p + scale_y_continuous(limits=c(0,100))
+p <- p + theme_bw()
+p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size=12, face='bold'))
+p <- p + labs(title='RCT Cumuative Enrollment \n', x='Month', y='Cumulative Percent')
+p
+@
+\end{minipage}
+
+
+
+% ----------------------------------------------------------------------------------------
+% Box 1: Shout-outs
+% ----------------------------------------------------------------------------------------
+\begin{minipage}[t][3in][c]{3in} 
+\textbf{Congratulations to our top enrolling (RCT) sites for the month: } \\
+\begin{description}
+  \item[Core ] \hfill \\
+    \begin{itemize}
+      \item University of Maryland R Adams Cowley Shock Trauma Center (1 patient)
+      \item University of Miami Ryder Trauma Center (1 patient)
+      \item Carolinas Medical Center (1 patient)
+      \item Wake Forest University Baptist Medical Center (1 patient)
+    \end{itemize}
+  \item[Satellite ] \hfill \\
+    \begin{itemize}
+      \item None this month
+    \end{itemize}
+\end{description}
+\end{minipage}
+
+
+
+% ----------------------------------------------------------------------------------------
+% Box 2: Enrollment update
+% ----------------------------------------------------------------------------------------
+<<box2, echo=FALSE>>=
+centers   <- length(unique(d$facility[!(d$facility %in% c(FOI, MIN))])) + 
+             any(d$facility %in% FOI) + any(d$facility %in% MIN)
+screened  <- sum(d$screened)
+eligible  <- paste(sum(d$eligible), 
+                   ' (', 
+                   sprintf('%.1f', (sum(d$eligible)/sum(d$screened))*100),
+                   '\\%)', sep='')
+RCT       <- paste(sum(d[d$group==1, 'enrolled']), 
+                   ' (', 
+                   sprintf('%.1f', (sum(d[d$group==1, 'enrolled'])/sum(d$eligible))*100),
+                   '\\% of eligible)', sep='')
+OBS       <- paste(sum(d[d$group==2, 'enrolled']), 
+                   ' (', 
+                   sprintf('%.1f', (sum(d[d$group==2, 'enrolled'])/sum(d$eligible))*100),
+                   '\\% of eligible)', sep='')
+ptTotal   <- paste(sprintf('%.1f', max(dPlot$cpt)), '\\%', sep='')
+complete  <- sum(d$completedStudy)
+@
+
+\begin{minipage}[t][3in][c]{2.5in} 
+  \textbf{Enrollment Update} \\
+  \begin{itemize}
+    \item There are \Sexpr{centers} trauma centers participating in this study 
+          (\Sexpr{centers} are certified)
+    \item \Sexpr{screened} patients have been screened for eligibility and 
+          of these, \Sexpr{eligible} were eligible at the time of consent
+    \item \Sexpr{RCT} were consented and enrolled in the RCT; 
+          \Sexpr{OBS} were consented and enrolled in the OBS
+    \item We have now reached \Sexpr{ptTotal} of our total enrollment in the RCT
+          (see figure)
+    \item \Sexpr{complete} patients have completed the study      
+  \end{itemize}
+\end{minipage}
+
+
+
+% ----------------------------------------------------------------------------------------
+% Box 3: Announcements
+% ----------------------------------------------------------------------------------------
+\begin{minipage}[t][3in][c]{2.5in} 
+\textbf{Study Announcements} \\
+\begin{itemize}
+  \item The amended protocol to extend patient follow-up at 18 and 24 months was 
+        distributed on Monday 3/31/14. Please get this into your IRBs if you have 
+        not done so already and send approvals to Rachel Kirk at the 
+        MCC (you do not require DoD approval for the amendment; please submit these 
+        documents at time of continuing review).
+  \item Patients returning for their 3 month study visit should be approached for 
+        enrollment into the STREAM study. As a STREAM participant, patients will 
+        complete additional surveys on an electronic tablet as part of their 
+        FIXIT 3, 6, and 12 month study visits.
+\end{itemize}
+\end{minipage}
+\end{multicols}
+
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Table 0: screening and enrollment summary
+% ----------------------------------------------------------------------------------------
+\begin{center}
+  \textbf{Screening and Enrollment Summary} \\
+  \textit{All Participating Sites}
+\end{center}
+
+<<table0, results='asis', echo=FALSE>>=
+formatCell <- function(x) { 
+  if (is.na(x)) {'-'} else { sprintf('%.0f', x) }
+  }  
+  
+dTable0             <- d  
+dTable0$subFacility <- dTable0$facility
+dTable0$facility    <- ifelse(dTable0$subFacility %in% MIN, 
+                              'MIN', 
+                              ifelse(dTable0$subFacility %in% FOI, 
+                                     'FOI', 
+                                     dTable0$subFacility))
+        
+   
+# get the stats by facility and subFacility   
+table0 <- merge(
+ddply(
+  dTable0, .(subFacility), summarise,
+    facility         =unique(facility),
+    t0.daysCertified    =unique(daysCert),
+    t0.expectedScreened =formatCell(unique(expectedScreened))),
+
+ddply(
+  dTable0, .(facility), summarise,
+    t0.screened         =sum(screened),
+    t0.enrolled         =sum(enrolled[group==1]),
+    t0.enrolledThisMonth=sum(enrolled[group==1 & 
+                                      screenAndEnrollMonth==prevMonth & 
+                                      screenAndEnrollYear ==prevYear]), 
+    t0.completed        =sum(enrolled[group==1 & completedStudy==1])),
+    
+    by='facility',
+    all.x=TRUE)
+
+# include a summary over all sites, order appropriately    
+table0 <- rbind(c('ALL', 
+                  'ALL', 
+                  '', 
+                  '', 
+                  sum(table0$t0.screened) 
+                    - unique(table0[table0$facility=='MIN',  't0.screened'])
+                    - unique(table0[table0$facility=='FOI', 't0.screened']), 
+                  sum(table0$t0.enrolled)
+                    - unique(table0[table0$facility=='MIN', 't0.enrolled'])
+                    - unique(table0[table0$facility=='FOI', 't0.enrolled']), 
+                  sum(table0$t0.enrolledThisMonth)
+                    - unique(table0[table0$facility=='MIN', 't0.enrolledThisMonth'])
+                    - unique(table0[table0$facility=='FOI', 't0.enrolledThisMonth']), 
+                  sum(table0$t0.completed)
+                    - unique(table0[table0$facility=='MIN', 't0.completed'])
+                    - unique(table0[table0$facility=='FOI', 't0.completed'])),                   
+                table0[order(-as.numeric(table0$t0.enrolled), 
+                             table0$facility,
+                             -as.numeric(table0$t0.daysCertified)), ])  
+
+# save the order
+table0$t0.order <- seq(1:nrow(table0))
+              
+# for the dual sites, hack the cell value to include latex multirow command
+# and the footnote
+addTex <- function(table, facility, subFacilities) {
+  firstCols <- c('subFacility', 't0.daysCertified', 't0.expectedScreened',
+                 't0.order')
+  lastCols  <- c('t0.screened', 't0.enrolled', 't0.enrolledThisMonth',
+                 't0.completed')
+  table <- rbind(
+             table[table$facility!=facility, ],
+             data.frame(
+               `facility`=rbind(lapply(table[table$facility==facility, 'facility'][1], 
+                            function(x) { paste('\\multirow{2}{*}{', x, ' \\footnote{', x, ' is a dual site comprised of ', subFacilities[1], ' and ', subFacilities[2], '}}', 
+                                                sep='') }),
+                     lapply(table[table$facility==facility, 'facility'][2],
+                            function(x) { '' })),                
+               table[table$facility==facility, firstCols],
+               rbind(lapply(table[table$facility==facility, lastCols][1, ], 
+                            function(x) { paste('\\multirow{2}{*}{', x, '}', 
+                                                sep='') }),
+                     lapply(table[table$facility==facility, lastCols][2, ],
+                            function(x) { '' }))))                                            
+  table
+}
+table0 <- addTex(table0, 'MIN', MIN)
+table0 <- addTex(table0, 'FOI', FOI)
+
+# return to original order
+table0 <- table0[order(table0$t0.order), ][ , -ncol(table0)]  
+              
+# reduce font size for subfacility and blank subFacility for non-dual sites
+table0$subFacility <- ifelse(table0$subFacility %in% c(MIN, FOI),
+                             paste('{\\scriptsize ', table0$subFacility, '}', sep=''), 
+                             '')              
+
+# print the latex  
+indexFOI <- grep('FOI', table0$facility)  
+indexMIN <- grep('MIN', table0$facility)                           
+print(xtable(table0, 
+             align='p{.75in}p{.5in}p{.5in}p{.7in}p{.7in}p{.7in}p{.7in}p{.7in}p{.75in}',
+             digits=0),
+      floating=FALSE,       
+      tabular.environment='longtable',  
+      include.colnames =FALSE,      
+      include.rownames =FALSE, 
+      booktabs         =TRUE,
+      sanitize.text.function    =function(x){x},
+      sanitize.colnames.function=function(x){x},
+      add.to.row                =list(pos    =as.list(c(0,0,0,0,0,1:(min(indexMIN, indexFOI)-1),
+                                                        min(indexMIN, indexFOI),
+                                                        (min(indexMIN, indexFOI)+1):(max(indexMIN, indexFOI)-1),
+                                                        max(indexMIN, indexFOI),
+                                                        (max(indexMIN, indexFOI)+1):(nrow(table0)-1))),
+                                      command=c(paste('Facility',
+                                                      '',
+                                                      'Days \\par Certified',
+                                                      'Expected \\par Screened',
+                                                      'Number \\par Screened',
+                                                      'Number \\par Enrolled',
+                                                      'RCT \\par Patients \\par Enrolled \\par This \\par Month', 
+                                                      'RCT \\par Patients \\par Completed',
+                                                      sep=' & '),
+                                                '\\endfirsthead',
+                                                "\\caption*{Screening and Enrollment Summary (cont'd)} \\\\ \\midrule ",
+                                                paste('Facility',
+                                                      '',
+                                                      'Days \\par Certified',
+                                                      'Expected \\par Screened',
+                                                      'Number \\par Screened',
+                                                      'Number \\par Enrolled',
+                                                      'RCT \\par Patients \\par Enrolled \\par This \\par Month', 
+                                                      'RCT \\par Patients \\par Completed',
+                                                      sep=' & '),
+                                               '\\endhead',
+                                               rep('\\midrule ', min(indexMIN, indexFOI)-1),
+                                               '\\cmidrule{2-4} ',
+                                               rep('\\midrule ', max(indexMIN, indexFOI)-min(indexMIN, indexFOI)-1),
+                                               '\\cmidrule{2-4}',
+                                               rep('\\midrule ', nrow(table0)-max(indexMIN, indexFOI)-1)
+                                               )))                                                       
+@
+
+
+% ----------------------------------------------------------------------------------------
+% Box 4: Study contacts
+% ----------------------------------------------------------------------------------------
+\vfill
+\begin{minipage}[t][][t]{\linewidth}
+  \textbf{\large Questions? Study Contacts:}\\
+  \begin{itemize}
+    \item Study PI: Robert O'Toole, MD (ROtoole@umoa.umm.edu)
+    \item MCC PI: Ellen MacKenzie, PhD (emackenz@jhsph.edu)
+    \item MCC Project Director: Lisa Reider, MHS (lsemanic@jhsph.edu)
+    \item MCC Study Manager: Rachel Kirk, BS (rkirk@jhsph.edu)
+  \end{itemize}
+\end{minipage}
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Table 1: screening and enrollment summary, with more detail
+% ----------------------------------------------------------------------------------------
+\begin{center}
+  \textbf{Monthly Table 1} \\
+  \textbf{Number of Subjects Screened
+          \footnote{Number screened based on all patients with 
+                    completed CRF00}, 
+          Eligible, Enrolled 
+          \footnote{Number enrolled includes all patients who have consented to 
+                    participate in RCT or OBS study}, 
+          and Not Enrolled} \\
+  \textit{Cumulative by Site}
+\end{center}
+    
+<<table1, results='asis', echo=FALSE>>=
+
+formatCell1 <- function(num, den) { 
+  if (num+den==0) { '0 (0%)' } else { paste(num, ' (', sprintf('%.0f', (num/den)*100), '%)', sep='') }
+  } 
+formatCell2 <- function(x) { 
+  if (is.na(x)) {'-'} else { sprintf('%.0f', x) }
+  }    
+  
+# combine the MIN and FOI sites for this table
+dTable1          <- d
+dTable1$facility <- ifelse(dTable1$facility %in% MIN, 
+                           'MIN', 
+                           ifelse(dTable1$facility %in% FOI, 
+                                  'FOI', 
+                                  dTable1$facility))
+dTable1$daysCert <- ifelse(dTable1$facility=='MIN', 
+                           max(d[dTable1$facility=='MIN', 'daysCert']),
+                           ifelse(dTable1$facility=='FOI', 
+                                  max(d[dTable1$facility=='FOI', 'daysCert']),
+                                  dTable1$daysCert))  
+  
+table1 <- rbind( ddply(
+  dTable1, .(), summarise,
+    facility            ='ALL',
+    t1.daysCertified    ='',
+    t1.expectedScreened ='',
+    t1.screened         =sum(screened),
+    t1.eligible         =formatCell1(num=sum(eligible),           den=sum(screened)),
+    t1.enrolledRCT      =formatCell1(num=sum(enrolled[group==1]), den=sum(eligible)),
+    t1.enrolledOBS      =formatCell1(num=sum(enrolled[group==2]), den=sum(eligible)),
+    t1.refused          =formatCell1(num=sum(refused),            den=sum(eligible)),
+    t1.notEnrolled      =formatCell1(num=sum(eligible[enrolled==0 & refused==0]), den=sum(eligible)))[ , -1],
+ddply(
+  dTable1, .(facility), summarise,
+    t1.daysCertified    =unique(daysCert),
+    t1.expectedScreened =formatCell2(sum(unique(expectedScreened))),
+    t1.screened         =sum(screened),
+    t1.eligible         =formatCell1(num=sum(eligible),           den=sum(screened)),
+    t1.enrolledRCT      =formatCell1(num=sum(enrolled[group==1]), den=sum(eligible)),
+    t1.enrolledOBS      =formatCell1(num=sum(enrolled[group==2]), den=sum(eligible)),
+    t1.refused          =formatCell1(num=sum(refused),            den=sum(eligible)),
+    t1.notEnrolled      =formatCell1(num=sum(eligible[enrolled==0 & refused==0]), den=sum(eligible)))
+)
+
+                             
+# column titles, with latex paragraph breaks
+names(table1)[which(names(table1)=='facility')]            <- 'Facility' 
+names(table1)[which(names(table1)=='t1.daysCertified')]    <- 'Days \\par Certified' 
+names(table1)[which(names(table1)=='t1.expectedScreened')] <- 'Expected \\par Screened' 
+names(table1)[which(names(table1)=='t1.screened')]         <- 'Number \\par Screened'
+names(table1)[which(names(table1)=='t1.eligible')]         <- 'Number \\par Eligible'
+names(table1)[which(names(table1)=='t1.enrolledRCT')]      <- 'Number \\par Enrolled \\par RCT'
+names(table1)[which(names(table1)=='t1.enrolledOBS')]      <- 'Number \\par Enrolled \\par OBS' 
+names(table1)[which(names(table1)=='t1.refused')]          <- 'Number \\par Refused  \\par' 
+names(table1)[which(names(table1)=='t1.notEnrolled')]      <- 'Number \\par Not      \\par Enrolled'   
+
+# print the table
+print(xtable(table1, 
+             align='p{.5in}p{.5in}p{.5in}p{.5in}p{.6in}p{.6in}p{.6in}p{.6in}p{.6in}p{.6in}',
+             digits=0),
+      floating                  =FALSE,       
+      tabular.environment       ='longtable', 
+      booktabs                  =TRUE, 
+      include.rownames          =FALSE,
+      sanitize.colnames.function=function(x){x},
+      add.to.row                =list(pos    =list(-1,-1,-1),
+                                      command=c('\\toprule',
+                                                paste('& & & & &   ',
+                                                    '\\multicolumn{4}{c}{Among ',
+                                                    'those Eligible (\\% Eligible)} ',
+                                                    '\\\\', sep=''),
+                                                '\\cmidrule{6-9} %')))                                     
+@
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Table 2a: screening and enrollment summary, by month, for the last 24 months
+% ----------------------------------------------------------------------------------------
+\begin{landscape}
+\begin{center}
+  \textbf{Monthly Table 2} \\
+  \textit{Number of Subjects Enrolled by Month of Participation and Site 
+         (Most Recent 24 Months)}
+\end{center}
+
+<<table2a, results='asis', echo=FALSE>>=
+
+# create all facility-month combinations over the last 24 months
+dates        <- seq.Date(from=as.Date(cutDate,      '%Y.%m.%d'), 
+                         to  =as.Date('2011.01.01', '%Y.%m.%d'), 
+                         by  ='-1 month')[2:25]
+dates        <- format(dates, '%Y-%m')
+facilities2  <- c('ALL', unique(d$facility)) 
+dateUniverse <- NULL
+for (facility2 in facilities2) {
+  dateUniverse <- rbind(dateUniverse,
+                        data.frame(`facility`           =rep(facility2, length(dates)),
+                                   `screenAndEnrollDate`=dates))
+  }
+dateUniverse$facility            <- as.character(dateUniverse$facility)
+dateUniverse$screenAndEnrollDate <- as.character(dateUniverse$screenAndEnrollDate)                           
+
+# create table 2 
+table2 <- rbind(ddply(d, .(screenAndEnrollDate), summarise,
+                      facility='ALL', 
+                      value   =paste(as.character(sum(enrolled)), 
+                                     as.character(sum(screened)), sep='/')),
+                ddply(d, .(screenAndEnrollDate, facility), summarise, 
+                      value=paste(as.character(sum(enrolled)), 
+                                  as.character(sum(screened)), sep='/')))
+
+# merge to the universe of dates - not all sites have screen and enroll in every 
+# month
+table2 <- merge(dateUniverse, table2, by=c('facility', 'screenAndEnrollDate'), all.x=TRUE)
+
+# set the cell value to missing if prior to site certification date, otherwise
+# set to '0/0'
+table2 <- merge(table2, 
+                facilityData[ , c('facility', 'daysCert', 'dateCert')], 
+                by=c('facility'),
+                all.x=TRUE)
+table2$value <- ifelse(is.na(table2$value), 
+                       ifelse(table2$screenAndEnrollDate <= table2$dateCert, 
+                              '', 
+                              '0/0'), 
+                       table2$value)
+                       
+# give the 'ALL' facility the most days certified
+table2$daysCert <- ifelse(table2$facility=='ALL', max(table2$daysCert, na.rm=TRUE)+1, table2$daysCert)                       
+
+# order table 2 by days certified
+table2 <- table2[order(-table2$daysCert, table2$screenAndEnrollDate), ]                
+
+# rotate table2
+table2 <- reshape(table2, v.names='value', timevar='facility', 
+                  idvar='screenAndEnrollDate', direction='wide', sep='', 
+                  drop=c('dateCert', 'daysCert'))                
+            
+# clean up the column labels
+colnames(table2)[which(colnames(table2)=='screenAndEnrollDate')] <- 'Month'
+colnames(table2)[2:length(colnames(table2))] <- substr(colnames(table2)[2:length(colnames(table2))], 6, 8)                  
+
+# split
+table2a <- table2[, c(1:2, 3:18)]
+table2b <- table2[, c(1:2, 19:length(colnames(table2)))]
+
+# print to file                  
+print(xtable(table2a, 
+             align  =paste('p{.1in}', paste(rep('l', 18), collapse=''), sep=''),
+             digits =0),
+      table.environment='longtable',       
+      include.rownames =FALSE, 
+      booktabs         =TRUE) 
+@
+\pagebreak
+
+
+% ----------------------------------------------------------------------------------------
+% Table 2b: screening and enrollment summary, by month, for the last 24 months
+% ----------------------------------------------------------------------------------------
+\begin{center}
+  \textbf{Monthly Table 2 (cont'd)} \\
+  \textit{Number of Subjects Enrolled by Month of Participation and Site 
+         (Most Recent 24 Months)}
+\end{center}
+
+<<table2b, results='asis', echo=FALSE>>=
+print(xtable(table2b, 
+             align  =paste('p{.1in}', paste(rep('l', length(colnames(table2))-16), collapse=''), sep=''),
+             digits =0),
+      table.environment='longtable',       
+      include.rownames =FALSE, 
+      booktabs         =TRUE)        
+@
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Table 3: missed visits by facility
+% ----------------------------------------------------------------------------------------
+\begin{center}
+  \textbf{Monthly Table 3} \\
+  \textit{Number of Expected \footnote{A visit is counted as complete (i.e. fully or 
+                                       partially completed) if at least one field in 
+                                       the CRFs to be completed for the visit has been 
+                                       keyed and this visit has not been indicated as 
+                                       missed on AF03. All out of window visits count 
+                                       as completed for the purpose of this report.}, 
+         Completed \footnote{A visit is counted as expected when the visit has been 
+                             completed (as defined above) or when the visit window 
+                             has been closed for 7 days and no forms have been keyed. 
+                             Patients who withdraw/ are lost to follow up are kept in 
+                             as incomplete visits. Deaths are censored at time of death. 
+                             Patients inappropriately enrolled are removed from all 
+                             totals.  Patients for whom Time Zero (e.g. date of 
+                             injury) is incomplete are excluded from this report.},
+         and Missed \footnote{A visit is counted as missed based on AF03. 
+                              Patients with no AF03 or no data entered into REDCap 
+                              will be listed in Query 2.} Visits by Study Visit
+         }
+\end{center}
+
+<<table3, results='asis', echo=FALSE>>=
+formatCell <- function(num, den) { 
+  if (num+den==0) { '0 (0%)' } else { paste(num, ' (', sprintf('%.0f', (num/den)*100), '%)', sep='') }
+  }  
+table3 <- merge(ddply(enrollmentData, .(facility), summarise, enrolled=sum(enrolled)),
+                ddply(visitData[visitData$visit %in% c(1,2,3,4), ], 
+                     .(facility, visit), 
+                     summarise,
+                       expected =as.character(sum(monthlyReportVisitExpected, na.rm=TRUE)),
+                       completed=formatCell(sum(monthlyReportVisitOccurred, na.rm=TRUE),
+                                            sum(monthlyReportVisitExpected, na.rm=TRUE)),
+                       missed   =formatCell(sum(monthlyReportVisitMissed,   na.rm=TRUE),
+                                            sum(monthlyReportVisitExpected, na.rm=TRUE))),
+                by='facility')       
+table3 <- reshape(table3, v.names=c('expected', 'completed', 'missed'), timevar='visit',
+                  idvar=c('facility','enrolled'), direction='wide', sep='')
+print(xtable(table3,
+             align  =paste('p{0.75in}', paste(rep('l', 14), collapse=''), sep=''),
+             digits =0),
+      table.environment='longtable',
+      include.rownames =FALSE,
+      include.colnames =FALSE,
+      booktabs         =TRUE,
+      add.to.row       =list(pos    =list(-1,-1,-1,-1),
+                             command=c('\\toprule ',
+                                       paste('Facility',
+                                             'Enrolled', 
+                                             '\\multicolumn{3}{c}{6 week}',
+                                             '\\multicolumn{3}{c}{3 month}',
+                                             '\\multicolumn{3}{c}{6 month}',
+                                             '\\multicolumn{3}{c}{12 month} \\\\',
+                                             sep=' & '),
+                                       paste('\\cmidrule(lr){3-5}', '\\cmidrule(lr){6-8}',
+                                             '\\cmidrule(lr){9-11}','\\cmidrule(lr){12-14}',
+                                             sep=''),
+                                       paste('& & ',
+                                             paste(rep('E & C & M', 4), collapse=' & '),
+                                             '\\\\ %',
+                                             sep='')
+                                       )))  
+@
+\end{landscape}
+\pagebreak
+
+
+% ----------------------------------------------------------------------------------------
+% Report 1 Query 1
+% ----------------------------------------------------------------------------------------
+\begin{center}
+  \textbf{Monthly Data Check Report 1} \par
+\end{center}
+Query 1: AF03 not submitted for Out of Window Visit 
+\footnote{The visit was out of window (based on actual date of visit) and AF03 
+          not submitted} \par
+\textit{Please check that all dates were entered correctly (e.g. time of injury 
+        or treatment, clinic visit dates). If dates are correct, complete an AF03 
+        in REDCap for the following visits which occurred out of window. Note that
+        visit windows are calculated based on the REDCap calendar function. If 
+        these windows are not consistent with the visit windows you calculated 
+        on your own, please note this in the AF03.
+        } \\
+
+<<report1_q1, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'monthlyReportVisit', 'visitDate', 'windowStart', 
+          'windowEnd', 'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report1_q1[ , cols] 
+  } else { 
+    q <- report1_q1[report1_q1$monthlyReportCurrentFacility==facility, cols]
+  }
+    
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId`   ='None',
+                  `monthlyReportVisit`='',
+                  `visitDate`         ='', 
+                  `windowStart`       ='',
+                  `windowEnd`         ='',
+                  `explanation`       ='')
+}     
+          
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align ='p{1in}p{1in}p{0.75in}p{0.75in}p{0.75in}p{0.75in}p{1.5in}',
+               digits=0),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable",   
+        sanitize.colnames.function=function(x){x},  
+        include.colnames=FALSE,  
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c(paste('Study ID',
+                                        'Visit \\par Number',
+                                        'Date \\par of \\par Visit',
+                                        'Start \\par of \\par Window',
+                                        'End \\par of \\par Window',
+                                        'Explanation', sep=' & '),
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 1 (cont'd)} \\\\ \\midrule",
+                                  paste('Study ID',
+                                        'Visit \\par Number',
+                                        'Start \\par of \\par Window',
+                                        'Date \\par of \\par Visit',
+                                        'End \\par of \\par Window',
+                                        'Explanation', sep=' & '),
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+                      
+}
+@
+\pagebreak                
+
+
+
+% ----------------------------------------------------------------------------------------
+% Report 1 Query 2
+% ----------------------------------------------------------------------------------------
+Query 2: AF03 not submitted for Missed Study Visit
+\footnote{No evidence that a visit occurred (e.g. no data from any of the 
+          required CRFs were entered for the visit) and AF03 not submitted
+          } \par
+\textit{According to REDCap records, these visits appear to be missed. If the visit 
+        was truly missed, complete an AF03 in REDCap and indicate in the space 
+        provided below that “Visit missed- AF03 was entered”. If the visit occurred, 
+        enter the data for the visit into REDCap and indicate that the 
+        “visit was completed; data has been entered.”  If the visit hasn’t occurred
+        yet and you are actively trying to schedule or reschedule an appointment, 
+        please note this in the space provided. If the patient died or has withdrawn 
+        from the study, complete an AF01 so that the patient will not show up on 
+        future reports.
+        } \\
+
+<<report1_q2, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'monthlyReportVisit', 'windowStart', 'windowEnd', 
+          'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report1_q2[ , cols] 
+  } else { 
+    q <- report1_q2[report1_q2$monthlyReportCurrentFacility==facility, cols]
+  }
+ 
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId`   ='None',
+                  `monthlyReportVisit`='', 
+                  `windowStart`       ='',
+                  `windowEnd`         ='',
+                  `explanation`       ='')
+} 
+          
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align ='p{1in}p{1in}p{0.75in}p{0.75in}p{0.75in}p{2.5in}',
+               digits=0),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable", 
+        sanitize.colnames.function=function(x){x},  
+        include.colnames=FALSE,  
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c(paste('Study ID',
+                                        'Visit \\par Number',
+                                        'Start \\par of \\par Window',
+                                        'End \\par of \\par Window',
+                                        'Explanation', sep=' & '),
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 2 (cont'd)} \\\\ \\midrule",
+                                  paste('Study ID',
+                                        'Visit \\par Number',
+                                        'Start \\par of \\par Window',
+                                        'End \\par of \\par Window',
+                                        'Explanation', sep=' & '),
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Report 1 Query 3
+% ----------------------------------------------------------------------------------------
+Query 3: Incomplete CRFs for Completed Visits \par
+\textit{Check that the form status is “complete” if all items are answered. 
+        If incomplete, indicate the reason (e.g. Question 4 in CRF 03 does not
+        allow completion; or Patient refused to answer questions on the SMFA) so 
+        that the MCC can make the appropriate edits to the data base that 
+        will allow you to enter data, or flag the form as complete to prevent
+        appearance on future reports. Please note, CRFs that are missing AIS 
+        codes will continue to appear on reports as a reminder until that data 
+        is entered. Patients with incomplete CRF00s will not be counted as 
+        screened- if the CRF00 was started in error, we will remove it from REDCap.
+        } \\
+
+<<report1_q3, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'monthlyReportVisit', 'crf', 'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report1_q3[ , cols] 
+  } else { 
+    q <- report1_q3[report1_q3$monthlyReportCurrentFacility==facility, cols]
+  }
+
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId`   ='None',
+                  `monthlyReportVisit`='', 
+                  `crf`               ='',
+                  `explanation`       ='')
+}
+       
+
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align='p{1in}p{1in}p{0.75in}p{0.75in}p{3.25in}'),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable",  
+        include.colnames=FALSE, 
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c('Study ID & Visit \\par Number & CRF & Explanation',
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 3 (cont'd)} \\\\ \\midrule",
+                                  'Study ID & Visit \\par Number & CRF & Explanation',
+                                  '\\endhead ',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Report 1 Query 4
+% ----------------------------------------------------------------------------------------
+Query 4: Missing AF01 for Deaths \footnote{As documented on the SAE Form} 
+         or Patients Who Completed the Final Follow-up Visit 
+         \footnote{Data for any CRF associated with the final visit was entered} \par
+\textit{Complete an AF01 for the following patients who appear to have 
+        completed a final visit or who died.} \\
+        
+<<report1_q4, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'reason', 'Explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report1_q4[ , cols] 
+  } else { 
+    q <- report1_q4[report1_q4$monthlyReportCurrentFacility==facility, cols]
+  }
+
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId`   ='None',
+                  `reason`            ='',
+                  `Explanation`       ='')
+}
+          
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align='p{1in}p{1in}p{0.75in}p{4in}'),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable", 
+        include.colnames=FALSE, 
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c('Study ID & Reason & Explanation',
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 4 (cont'd)} \\\\ \\midrule",
+                                  'Study ID & Reason & Explanation',
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+% ----------------------------------------------------------------------------------------
+% Report 2 Query 1
+% ----------------------------------------------------------------------------------------
+\begin{center}
+  \textbf{Monthly Data Check Report 2} \\
+\end{center}
+Query 1: Surgeries were recorded on CRF06 Index Hospitalization Form but the 
+         corresponding CRF09 OR Trip forms(s) are missing \\
+        
+<<report2_q1, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'orTripNum', 'orTripDate', 'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report2_q1[ , cols] 
+  } else { 
+    q <- report2_q1[report2_q1$monthlyReportCurrentFacility==facility, cols]
+  }
+
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId`='None',
+                  `orTripNum`      ='', 
+                  `orTripDate`     ='',
+                  `explanation`    ='')
+}
+          
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align ='p{1in}p{1in}p{0.75in}p{0.75in}p{3.25in}',
+               digits=0),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable",  
+        include.colnames=FALSE, 
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c(paste('Study ID',
+                                        'OR Trip',
+                                        'Missing \\par OR Trip \\par Date',
+                                        'Explanation', sep=' & '),
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 1 (cont'd)} \\\\ \\midrule",
+                                  paste('Study ID',
+                                        'OR Trip',
+                                        'Missing \\par OR Trip \\par Date',
+                                        'Explanation', sep=' & '),
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Report 2 Query 2
+% ----------------------------------------------------------------------------------------
+Query 2: The definitive fixation was indicated on a CRF09 OR trip form but CRF07 Definitive 
+         Fixation Form is missing \\
+        
+<<report2_q2, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'orTripDate', 'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report2_q2[ , cols] 
+  } else { 
+    q <- report2_q2[report2_q2$monthlyReportCurrentFacility==facility, cols]
+  }
+
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId`='None',
+                  `orTripDate`     ='',
+                  `explanation`    ='')
+} else if (q$monthlyReportId=='') {
+  q <- data.frame(`monthlyReportId`='None',
+                  `orTripDate`     ='',
+                  `explanation`    ='')  
+}
+          
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align='p{1in}p{1in}p{0.75in}p{4in}'),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable",   
+        include.colnames=FALSE, 
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c(paste('Study ID',
+                                        'OR Trip \\par Date \\par Indicating \\par DF',
+                                        'Explanation', sep=' & '),
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 2 (cont'd)} \\\\ \\midrule",
+                                  paste('Study ID',
+                                        'OR Trip \\par Date \\par Indicating \\par DF',
+                                        'Explanation', sep=' & '),
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+
+
+% ----------------------------------------------------------------------------------------
+% Report 2 Query 3
+% ----------------------------------------------------------------------------------------
+Query 3: Missing CRF08, CRF09 and/or discharge abstract for study related 
+         re-hospitalizations documented on the Medical Record Review
+\footnote{For hospitalizations occurring at your facility or at another facility} \\
+        
+<<report2_q3, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'eventDate', 'missingCRF08', 'missingCRF09', 
+          'missingAbstract', 'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report2_q3[ , cols] 
+  } else { 
+    q <- report2_q3[report2_q3$monthlyReportCurrentFacility==facility, cols]
+  }
+
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId`='None',
+                  `eventDate`      ='',
+                  `missingCRF08`   ='', 
+                  `missingCRF09`   ='',
+                  `missingAbstract`='',
+                  `explanation`    ='')
+}
+
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align='p{1in}p{1in}p{0.75in}p{0.5in}p{0.5in}p{0.5in}p{2.5in}'),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable", 
+        include.colnames=FALSE, 
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c(paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par CRF08',
+                                        'Missing \\par CRF09',
+                                        'Missing \\par Discharge \\par Abstract',
+                                        'Explanation', sep=' & '),
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 3 (cont'd)} \\\\ \\midrule",
+                                  paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par CRF08',
+                                        'Missing \\par CRF09',
+                                        'Missing \\par Discharge \\par Abstract',
+                                        'Explanation', sep=' & '),
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+
+
+% ----------------------------------------------------------------------------------------
+% Report 2 Query 4
+% ----------------------------------------------------------------------------------------
+Query 4: Missing CRF08, CRF09 and / or discharge abstract for study related 
+         re-hospitalizations documented in the Clinical Follow-up Forms 
+\footnote{For hospitalizations occurring at your facility or at another facility} \\
+        
+<<report2_q4, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'eventDate', 'missingCRF08or09', 'missingCRF09',  
+          'missingAbstract', 'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report2_q4[ , cols] 
+  } else { 
+    q <- report2_q4[report2_q4$monthlyReportCurrentFacility==facility, cols]
+  }
+
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId` ='None',
+                  `eventDate`       ='',
+                  `missingCRF08or09`='',
+                  `missingCRF09`    ='',
+                  `missingAbstract` ='',
+                  `explanation`     ='')
+}
+
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align='p{1in}p{1in}p{0.75in}p{0.5in}p{0.5in}p{0.5in}p{2.5in}'),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable",
+        include.colnames=FALSE, 
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c(paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par CRF08 or \\par CRF09',
+                                        'Missing \\par CRF09',
+                                        'Missing \\par Discharge \\par Abstract',
+                                        'Explanation', sep=' & '),
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 4 (cont'd)} \\\\ \\midrule",
+                                  paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par CRF08 or \\par CRF09',
+                                        'Missing \\par CRF09',
+                                        'Missing \\par Discharge \\par Abstract',
+                                        'Explanation', sep=' & '),
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Report 2 Query 5
+% ----------------------------------------------------------------------------------------
+Query 5: Missing discharge abstract for non-study related re-hospitalizations 
+         documented on the Medical Record Review Forms for hospitalizations at
+         your facility \\
+         
+<<report2_q5, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'eventDate', 'missingAbstract', 'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report2_q5[ , cols] 
+  } else { 
+    q <- report2_q5[report2_q5$monthlyReportCurrentFacility==facility, cols]
+  }
+
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId` ='None',
+                  `eventDate`       ='',
+                  `missingAbstract` ='',
+                  `explanation`     ='')
+}
+         
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align='p{1in}p{1in}p{0.75in}p{0.5in}p{3.5in}'),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable", 
+        include.colnames=FALSE, 
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c(paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par Discharge \\par Abstract',
+                                        'Explanation', sep=' & '),
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 5 (cont'd)} \\\\ \\midrule",
+                                  paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par Discharge \\par Abstract',
+                                        'Explanation', sep=' & '),
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Report 2 Query 6
+% ----------------------------------------------------------------------------------------
+Query 6: Missing discharge abstract for non-study related re-hospitalizations 
+         documented in the Clinical Follow-up Forms for hospitalizations at
+         your facility \\
+         
+<<report2_q6, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'eventDate', 'missingAbstract', 'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report2_q6[ , cols] 
+  } else { 
+    q <- report2_q6[report2_q6$monthlyReportCurrentFacility==facility, cols]
+  }
+
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId` ='None',
+                  `eventDate`       ='',
+                  `missingAbstract` ='',
+                  `explanation`     ='')
+}
+          
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align='p{1in}p{1in}p{0.75in}p{0.5in}p{3.5in}'),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable",  
+        include.colnames=FALSE, 
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c(paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par Discharge \\par Abstract',
+                                        'Explanation', sep=' & '),
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 6 (cont'd)} \\\\ \\midrule",
+                                  paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par Discharge \\par Abstract',
+                                        'Explanation', sep=' & '),
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+
+% ----------------------------------------------------------------------------------------
+% Report 2 Query 7
+% ----------------------------------------------------------------------------------------
+Query 7: Missing Clinical Follow-up and/or Medical Record Review Forms for 
+         re-hospitalizations documented on the Inpatient Stay Form (CRF08) \\
+         
+<<report2_q7, results='asis', echo=FALSE>>=
+cols <- c('monthlyReportId', 'eventDate', 'missingCFUP', 'missingMRR', 'explanation')
+          
+# use only those subjects at the facility (unless 'ALL')
+if (facility=='ALL') { 
+    q <- report2_q7[ , cols] 
+  } else { 
+    q <- report2_q7[report2_q7$monthlyReportCurrentFacility==facility, cols]
+  }
+
+# if no records, make a table showing None
+if (nrow(q)==0) { 
+  q <- data.frame(`monthlyReportId` ='None',
+                  `eventDate`       ='',
+                  `missingCFUP`     ='',
+                  `missingMRR`      ='',
+                  `explanation`     ='')
+}
+
+# print
+if (nrow(q) >0) {
+  print(xtable(q, 
+               align='p{1in}p{1in}p{0.75in}p{0.5in}p{0.5in}p{3in}'),
+        floating=FALSE,
+        booktabs=TRUE,
+        tabular.environment="longtable", 
+        include.colnames=FALSE, 
+        include.rownames=FALSE,
+        add.to.row=list(pos    =append(list(0,0,0,0,0), as.list(seq(from=1, to=max(1, nrow(q)-1)))),
+                        command=c(paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par Clinical \\par Follow-up',
+                                        'Missing \\par Medical \\par Record \\par Review',
+                                        'Explanation', sep=' & '),
+                                  '\\endfirsthead',
+                                  "\\caption*{Query 7 (cont'd)} \\\\ \\midrule",
+                                  paste('Study ID',
+                                        'Hosp \\par Date',
+                                        'Missing \\par Clinical \\par Follow-up',
+                                        'Missing \\par Medical \\par Record \\par Review',
+                                        'Explanation', sep=' & '),
+                                  '\\endhead',
+                                  rep('\\midrule ', max(1, nrow(q)-1)))))
+}
+@
+\pagebreak
+
+
+
+\end{document}  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
