@@ -63,7 +63,7 @@ select case
            when e.group=2 and e.enrolled=1 then e.id
 		   else ''
 		 end) as enrolledOBS,
-	   (sum(monthlyReportVisitOccurred)/sum(monthlyReportVisitExpected))*100 as followupRate,
+	   (sum(monthlyReportVisitOccurred)/sum(monthlyReportVisitExpected))*100 as followup,
 	   'FIX' as projectCode
 from   (facilityData   (keep=facility facilityType)      f 
           left join
